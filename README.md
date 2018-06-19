@@ -1,2 +1,2 @@
-# GMail-API-Module
-Here I'm developing a PowerShell module to connect to the Gmail using the API
+# GoogleApps-API-Module
+Here I'm developing a PowerShell module to connect to the Google Apps using the API
