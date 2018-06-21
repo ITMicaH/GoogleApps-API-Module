@@ -13,15 +13,15 @@ class GoogleApp
         {
             Gmail {
                 $this.Scope = 'https://mail.google.com/'
-                $this.BaseURI = 'https://www.googleapis.com/gmail/v3/users/me'
+                $this.BaseURI = 'https://www.googleapis.com/gmail/v3'
             }
             Calendar {
                 $this.Scope = 'https://www.googleapis.com/auth/calendar'
-                $this.BaseURI = 'https://www.googleapis.com/calendar/v3/users/me'
+                $this.BaseURI = 'https://www.googleapis.com/calendar/v3'
             }
             Contacts {
                 $this.Scope = 'https://www.google.com/m8/feeds/'
-                $this.BaseURI = 'https://www.google.com/m8/feeds/'
+                $this.BaseURI = 'https://www.google.com/m8/feeds'
             }
         }
     }
@@ -55,6 +55,49 @@ class EventReminder
    }
 }
 
+# Class for Calendar event attendees
+class EventAttendee
+{
+    [ValidatePattern('.+@.+\.\w+')]
+    [string] $email
+    [string] $displayName
+    [int]    $additionalGuests = 0
+    [bool]   $optional = $false
+    [bool]   $resource = $false
+
+    # Constructor email
+    EventAttendee ([string]$Email)
+    {
+        $this.email = $Email
+    }
+
+    # Constructor email and displayname
+    EventAttendee ([string]$Email,[string]$DisplayName)
+    {
+        $this.email = $Email
+        $this.displayName = $DisplayName
+    }
+
+    # Constructor email and optional
+    EventAttendee ([string]$Email,[bool]$Optional)
+    {
+        $this.email = $Email
+        $this.optional = $Optional
+    }
+
+    # Constructor all
+    EventAttendee ([string]$Email,[string]$DisplayName,
+                   [int]$AdditionalGuests,[bool]$Optional,
+                   [bool]$Resource)
+    {
+        $this.email = $Email
+        $this.displayName = $DisplayName
+        $this.additionalGuests = $AdditionalGuests
+        $this.optional = $Optional
+        $this.resource = $Resource
+    }
+}
+
 #endregion Calendar classes
 
 #endregion Classes
@@ -68,18 +111,5 @@ enum GoogleAppName
     Contacts
 }
 
-enum APIMethod
-{
-    Default
-    Get
-    Head
-    Post
-    Put
-    Delete
-    Trace
-    Options
-    Merge
-    Patch
-}
 
 #endregion Enums
