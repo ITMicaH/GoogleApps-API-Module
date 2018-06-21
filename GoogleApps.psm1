@@ -53,7 +53,7 @@ function Get-GoogleAccessToken
     New-Variable -Name "$App`Access" -Scope global -Value @{
         access_token = $RefreshedToken.access_token
         expires = (Get-Date).AddSeconds($RefreshedToken.expires_in)
-    } -Force -PassThru
+    } -Force -PassThru | select -ExpandProperty Value
 }
 
 # Invoke a Google API request
@@ -66,12 +66,15 @@ function Invoke-GoogleAPI
         [GoogleApp]
         $App,
 
-        [APIMethod]
+        [Microsoft.PowerShell.Commands.WebRequestMethod]
         $Method = 'Default',
 
         [Parameter(Mandatory=$true)]
         [string]
         $Target,
+
+        [string[]]
+        $Options,
 
         $Body
     )
@@ -89,12 +92,13 @@ function Invoke-GoogleAPI
         URI = "$($App.BaseURI)/$Target`?access_token=$($AccessToken.access_token)"
         Method = $Method
     }
-    If ($PsBoundParameters.Body)
+    switch ($PsBoundParameters.Keys)
     {
-        $WRProperties.Add('Body',$Body)
+        Body    {$WRProperties.Add('Body',$Body)}
+        Options {$WRProperties.URI = $WRProperties.URI + '&' + ($Options -join '&')}
     }
     
-    Invoke-WebRequest @WRProperties | ConvertFrom-Json
+    Invoke-WebRequest @WRProperties -ContentType 'application/json' | ConvertFrom-Json
 }
 
 # Set up a connection to the API of a Google app
@@ -138,29 +142,20 @@ function Connect-GoogleApp
     }
     If (!$SecureCode -or $Reset)
     {
-        switch ($App) {
-            GMail    {$Scope = 'https://mail.google.com/'}
-            Calendar {$Scope = 'https://www.googleapis.com/auth/calendar'}
-        }
+        $Scope = $App.Scope
         $URL = "$($ClientIDInfo.auth_uri)?client_id=$($ClientIDInfo.client_id)" +`
                 "&redirect_uri=$($ClientIDInfo.redirect_uris[0])" +`
                 "&scope=$Scope&response_type=code"
         Start-Process $URL
         $SecureCode = Read-Host "Please enter your authorization code" -AsSecureString | 
             ConvertFrom-SecureString
-        $null = New-ItemProperty -Path HKCU:\Software\GooglePoSH -Name ($App + 'Code') -Value $SecureCode -Force
-        If ($ClientIDInfo.($App + 'Token'))
+        $null = New-ItemProperty -Path HKCU:\Software\GooglePoSH -Name $CodeName -Value $SecureCode -Force
+        If ($ClientIDInfo."$App`Token")
         {
-            Remove-ItemProperty -Path HKCU:\Software\GooglePoSH -Name ($App + 'Token')
+            Remove-ItemProperty -Path HKCU:\Software\GooglePoSH -Name "$App`Token"
         }
     }
     Get-GoogleAccessToken -App $App
 }
 
 #endregion helper functions
-
-# Load classes
-. "$PSScriptRoot\GoogleAppsClasses.ps1"
-
-# Load calendar cmdlets
-. "$PSScriptRoot\GoogleCalendar.ps1"
