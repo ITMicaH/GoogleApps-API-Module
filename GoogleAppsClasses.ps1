@@ -6,7 +6,7 @@ class GoogleApp
     [uri]$Scope
     [uri]$BaseURI
 
-    GoogleApp ([string]$Name)
+    GoogleApp ([GoogleAppName]$Name)
     {
         $this.Name = $Name
         switch ($Name)
