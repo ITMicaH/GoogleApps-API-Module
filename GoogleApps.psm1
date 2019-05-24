@@ -108,8 +108,8 @@ function Connect-GoogleApp
     Param(
         # Google App to connect to
         [Parameter(Mandatory=$true)]
-        [GoogleApp]
-        $App,
+        [GoogleAppName]
+        $AppName,
 
         # Path to the json file with the client secret
         [Parameter(Mandatory=$false)]
@@ -119,6 +119,7 @@ function Connect-GoogleApp
         [switch]
         $Reset
     )
+    $App = [GoogleApp]::new($AppName)
     $CodeName = "$App`Code"
     If ($ClientIDInfo = Get-ItemProperty -Path HKCU:\Software\GooglePoSH -ErrorAction SilentlyContinue)
     {
@@ -134,6 +135,17 @@ function Connect-GoogleApp
         $ClientIDInfo = Get-Content $File -ErrorAction Stop | ConvertFrom-Json | select -ExpandProperty Installed
         
         $null = New-Item HKCU:\Software\GooglePoSH
+        ($ClientIDInfo | Get-Member -MemberType NoteProperty).Name.foreach{
+            If ($ClientIDInfo.$_.GetType().Name -eq 'Object[]')
+            {
+                $Value = [string[]]$ClientIDInfo.$_
+            }
+            else
+            {
+                $Value = [string]$ClientIDInfo.$_
+            }
+            $null = New-ItemProperty -Path HKCU:\Software\GooglePoSH -Name $_ -Value $Value -Force
+        }
     }
     else
     {
