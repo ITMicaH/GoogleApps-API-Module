@@ -7,7 +7,7 @@ function Get-GoogleAccessToken
     Param(
         # Google App to gain access to
         [Parameter(Mandatory=$true)]
-        [GoogleApp]
+        [GoogleAppName]
         $App,
 
         # Refresh current token
