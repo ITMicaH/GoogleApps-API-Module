@@ -139,6 +139,7 @@ function New-GoogleCalendarEvent
     }
 }
 
+
 function Get-GoogleCalendarEvent
 {
     [CmdletBinding()]
@@ -207,8 +208,8 @@ function Get-GoogleCalendarEvent
         elseif ($PSBoundParameters.Date)
         {
             Write-Verbose 'No end date provided. Setting default end date.'
-            $End = (Get-Date $Date).AddMinutes(30)
-            $PSBoundParameters.end = $End
+            $End = (Get-Date $Date).AddDays(1)
+            $PSBoundParameters.EndDate = $End
         }
         Write-Verbose 'Creating query url'
         $ApiParam = @{
