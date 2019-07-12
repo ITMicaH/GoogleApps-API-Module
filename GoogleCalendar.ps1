@@ -12,7 +12,6 @@ function New-GoogleCalendarEvent
 
         # Title for the event
         [Parameter(Mandatory=$true)]
-        [Alias('Title')]
         [string]
         $Summary,
 
@@ -29,7 +28,7 @@ function New-GoogleCalendarEvent
         $Attendees,
 
         # Reminder(s) for the event
-        [EventReminder]
+        [EventReminder[]]
         $Reminder,
 
         # Event is all day
@@ -43,7 +42,7 @@ function New-GoogleCalendarEvent
     DynamicParam 
     {
         # Set the dynamic parameters' name
-        $ParameterName = 'CalendarId'
+        $ParameterName = 'Calendar'
 
         # Create and set the parameters' attributes
         $ParameterAttribute = New-Object System.Management.Automation.ParameterAttribute
@@ -53,7 +52,8 @@ function New-GoogleCalendarEvent
         # Generate and set the ValidateSet
         $arrSet = New-Object System.Collections.ArrayList
         $null = $arrSet.Add('Primary')
-        $null = (Invoke-GoogleAPI -App Calendar -Method Get -Target users/me/calendarList).items.foreach({$arrSet.Add($_.Id)})
+        $Calendars = @(Invoke-GoogleAPI -App Calendar -Method Get -Target users/me/calendarList).items
+        $null = $arrSet.AddRange($Calendars.where{!$_.Primary}.Summary) #.foreach({$arrSet.Add($_.Summary)})
         $ValidateSetAttribute = New-Object System.Management.Automation.ValidateSetAttribute($arrSet)
 
         # Add the attributes to the attributes collection
@@ -70,9 +70,9 @@ function New-GoogleCalendarEvent
 
     Process
     {
-        If ($PSBoundParameters.CalendarId)
+        If ($PSBoundParameters.Calendar)
         {
-            $CalendarId = $PSBoundParameters.CalendarId
+            $CalendarId = $Calendars.where{$_.Summary -eq $PSBoundParameters.Calendar}.Id
         }
         else
         {
@@ -87,6 +87,7 @@ function New-GoogleCalendarEvent
         }
         else
         {
+            Write-Verbose 'No end date provided. Setting default end date.'
             $End = (Get-Date $Start).AddMinutes(30)
             $PSBoundParameters.end = $End
         }
@@ -95,6 +96,7 @@ function New-GoogleCalendarEvent
             $true   {$DateType = 'date';$DateFormat = 'yyyy-MM-dd'}
             Default {$DateType = 'dateTime';$DateFormat = 'yyyy-MM-ddTHH:mm:sszzz'}
         }
+        Write-Verbose 'Creating json body'
         $ApiParam = @{
             App = 'Calendar'
             Method = 'POST'
@@ -127,11 +129,115 @@ function New-GoogleCalendarEvent
                 $ApiParam.Body.summary = $Summary
             }
             SendNotifications {
-                $ApiParam.Add('Options',"sendNotifications=$true")
+                $ApiParam.Add('Options',@{sendUpdates='all'})
             }
         }
         $ApiParam.Body = ($ApiParam.Body | ConvertTo-Json).Replace('null','""')
-
+        
+        Write-Verbose 'Invoking Google API'
         Invoke-GoogleAPI @ApiParam
     }
 }
+
+function Get-GoogleCalendarEvent
+{
+    [CmdletBinding()]
+    Param(
+        # (Start)Date for the event
+        [Parameter()]
+        $Date = '13-7-2019',
+
+        # End date for the event
+        $EndDate,
+
+        # Search events for this string
+        [string]
+        $SearchString,
+
+        # Reminder(s) for the event
+        [hashtable]
+        $Filter
+    )
+    DynamicParam 
+    {
+        # Set the dynamic parameters' name
+        $ParameterName = 'Calendar'
+
+        # Create and set the parameters' attributes
+        $ParameterAttribute = New-Object System.Management.Automation.ParameterAttribute
+        $ParameterAttribute.Mandatory = $false
+        $ParameterAttribute.Position = 0
+
+        # Generate and set the ValidateSet
+        $arrSet = New-Object System.Collections.ArrayList
+        $null = $arrSet.Add('Primary')
+        $Calendars = @(Invoke-GoogleAPI -App Calendar -Method Get -Target users/me/calendarList).items
+        $null = $arrSet.AddRange($Calendars.where{!$_.Primary}.Summary) #.foreach({$arrSet.Add($_.Summary)})
+        $ValidateSetAttribute = New-Object System.Management.Automation.ValidateSetAttribute($arrSet)
+
+        # Add the attributes to the attributes collection
+        $AttributeCollection = New-Object System.Collections.ObjectModel.Collection[System.Attribute]
+        $AttributeCollection.Add($ParameterAttribute)
+        $AttributeCollection.Add($ValidateSetAttribute)
+
+        # Create and return the dynamic parameter
+        $RuntimeParameter = New-Object System.Management.Automation.RuntimeDefinedParameter($ParameterName, [string], $AttributeCollection)
+        $RuntimeParameterDictionary = New-Object System.Management.Automation.RuntimeDefinedParameterDictionary
+        $RuntimeParameterDictionary.Add($ParameterName, $RuntimeParameter)
+        return $RuntimeParameterDictionary
+    }
+
+    Process
+    {
+        If ($PSBoundParameters.Calendar)
+        {
+            $CalendarId = $Calendars.where{$_.Summary -eq $PSBoundParameters.Calendar}.Id
+        }
+        else
+        {
+            $CalendarId = 'primary'
+        }
+        If ($PSBoundParameters.EndDate)
+        {
+            If ((Get-Date $Date -ErrorAction Stop) -gt (Get-Date $EndDate -ErrorAction Stop))
+            {
+                Write-Error "Start date is later than end date." -Category InvalidArgument -ErrorAction Stop
+            }
+        }
+        elseif ($PSBoundParameters.Date)
+        {
+            Write-Verbose 'No end date provided. Setting default end date.'
+            $End = (Get-Date $Date).AddMinutes(30)
+            $PSBoundParameters.end = $End
+        }
+        Write-Verbose 'Creating query url'
+        $ApiParam = @{
+            App = 'Calendar'
+            Method = 'Get'
+            Target = "calendars/$CalendarId/events/"
+            Options = @{}
+        }
+        switch ($PSBoundParameters.keys)
+        {
+            Date {
+                $ApiParam.Options.Add('timeMin',(Get-Date $Date -Format 'yyyy-MM-ddTHH:mm:ssZ'))
+            }
+            EndDate {
+                $ApiParam.Options.Add('timeMax',(Get-Date $Date -Format 'yyyy-MM-ddTHH:mm:ssZ'))
+            }
+            SearchString {
+                $ApiParam.Options.Add('q',$SearchString)
+            }
+            Filter {
+                $ApiParam.Options.Add('sharedExtendedProperty',$Filter.GetEnumerator().ForEach{"$($_.Key)=$($_.Value)"})
+            }
+        }
+        
+        Write-Verbose 'Invoking Google API'
+        Invoke-GoogleAPI @ApiParam | Select -ExpandProperty Items
+    }
+}
+
+<#
+    New-GoogleCalendarEvent -Start 22-6-2018 -Summary "Titel - TEST" -AllDay -Description "Test - description" -Location Testlocatie -Attendees m.vdzouwen@tweedekamer.nl -SendNotifications
+#>
