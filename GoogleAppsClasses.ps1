@@ -6,7 +6,7 @@ class GoogleApp
     [uri]$Scope
     [uri]$BaseURI
 
-    GoogleApp ([GoogleAppName]$Name)
+    GoogleApp ([string]$Name)
     {
         $this.Name = $Name
         switch ($Name)
@@ -53,6 +53,11 @@ class EventReminder
        $this.Method = $Reminder.Method  
        $this.Minutes = $Reminder.Minutes     
    }
+
+   [string] ToString()
+   {
+       return "$($this.Method)($($this.Minutes))"
+   }
 }
 
 # Class for Calendar event attendees
@@ -95,6 +100,11 @@ class EventAttendee
         $this.additionalGuests = $AdditionalGuests
         $this.optional = $Optional
         $this.resource = $Resource
+    }
+
+    [string] ToString()
+    {
+        return $this.email
     }
 }
 
