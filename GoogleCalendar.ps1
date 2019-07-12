@@ -5,10 +5,10 @@ function New-GoogleCalendarEvent
     Param(
         # Start date for the event
         [Parameter(Mandatory=$true)]
-        $Start = '21-6-2018 12:00',
+        $Start,
 
         # End date for the event
-        $End = '21-6-2018 12:30',
+        $End,
 
         # Title for the event
         [Parameter(Mandatory=$true)]
@@ -146,7 +146,7 @@ function Get-GoogleCalendarEvent
     Param(
         # (Start)Date for the event
         [Parameter()]
-        $Date = '13-7-2019',
+        $Date,
 
         # End date for the event
         $EndDate,
@@ -208,8 +208,8 @@ function Get-GoogleCalendarEvent
         elseif ($PSBoundParameters.Date)
         {
             Write-Verbose 'No end date provided. Setting default end date.'
-            $End = (Get-Date $Date).AddDays(1)
-            $PSBoundParameters.EndDate = $End
+            $EndDate = (Get-Date $Date).AddDays(1)
+            $PSBoundParameters.EndDate = $EndDate
         }
         Write-Verbose 'Creating query url'
         $ApiParam = @{
@@ -221,10 +221,10 @@ function Get-GoogleCalendarEvent
         switch ($PSBoundParameters.keys)
         {
             Date {
-                $ApiParam.Options.Add('timeMin',(Get-Date $Date -Format 'yyyy-MM-ddTHH:mm:ssZ'))
+                $ApiParam.Options.Add('timeMin',(Get-Date $Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ'))
             }
             EndDate {
-                $ApiParam.Options.Add('timeMax',(Get-Date $Date -Format 'yyyy-MM-ddTHH:mm:ssZ'))
+                $ApiParam.Options.Add('timeMax',(Get-Date $EndDate).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ'))
             }
             SearchString {
                 $ApiParam.Options.Add('q',$SearchString)
@@ -241,4 +241,5 @@ function Get-GoogleCalendarEvent
 
 <#
     New-GoogleCalendarEvent -Start 22-6-2018 -Summary "Titel - TEST" -AllDay -Description "Test - description" -Location Testlocatie -Attendees m.vdzouwen@tweedekamer.nl -SendNotifications
+    Get-GoogleCalendarEvent -Calendar 'Shared Calendar' -Date 3-3-2019
 #>
