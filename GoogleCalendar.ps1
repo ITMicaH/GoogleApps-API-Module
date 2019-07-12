@@ -1,7 +1,7 @@
 
 function New-GoogleCalendarEvent
 {
-    [CmdletBinding()]
+    [CmdletBinding(SupportsShouldProcess)]
     Param(
         # Start date for the event
         [Parameter(Mandatory=$true)]
@@ -134,8 +134,11 @@ function New-GoogleCalendarEvent
         }
         $ApiParam.Body = ($ApiParam.Body | ConvertTo-Json).Replace('null','""')
         
-        Write-Verbose 'Invoking Google API'
-        Invoke-GoogleAPI @ApiParam
+        If ($PSCmdlet.ShouldProcess("$Start ($Attendees)","Create calendar event"))
+        {
+            Write-Verbose 'Invoking Google API'
+            Invoke-GoogleAPI @ApiParam
+        }
     }
 }
 
