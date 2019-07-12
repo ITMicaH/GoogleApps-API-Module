@@ -101,18 +101,18 @@ function Invoke-GoogleAPI
                 {
                     foreach ($Value in $_.Value)
                     {
-                        $WRProperties.URI = $WRProperties.URI + "&$($_.Key)=$Value"
+                        $WRProperties.URI = $WRProperties.URI + "&$($_.Key)=$($Value.replace(' ','%20'))"
                     }
                 }
                 else
                 {
-                    $WRProperties.URI = $WRProperties.URI + "&$($_.Key)=$($_.Value)"
+                    $WRProperties.URI = $WRProperties.URI + "&$($_.Key)=$($_.Value.replace(' ','%20'))"
                 }
             }
         }
     }
     
-    Invoke-WebRequest @WRProperties -ContentType 'application/json' | 
+    Invoke-WebRequest @WRProperties -ContentType 'application/json;charset=utf-8' | 
         Select -ExpandProperty Content | ConvertFrom-Json
 }
 
