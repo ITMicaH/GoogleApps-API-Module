@@ -1,3 +1,4 @@
+. "$PSScriptRoot\GoogleAppsClasses.ps1"
 #region helper functions
 
 # Get or refresh access token
@@ -21,7 +22,7 @@ function Get-GoogleAccessToken
         client_secret = $ClientIDInfo.client_secret
         grant_type = 'refresh_token';
     }
-    If ($ClientIDInfo."$App`Token" -or $Refresh)
+    If ($ClientIDInfo."$App`Token")
     {
         $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR(($ClientIDInfo."$App`Token" | ConvertTo-SecureString))
         $TokenParams.Add('refresh_token',[System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR))
@@ -73,7 +74,7 @@ function Invoke-GoogleAPI
         [string]
         $Target,
 
-        [hashtable]
+        [string[]]
         $Options,
 
         $Body
@@ -84,7 +85,7 @@ function Invoke-GoogleAPI
     If (!$AccessToken -or ($AccessToken.expires -le (Get-Date)))
     {
         Write-Verbose 'Getting new access token'
-        $AccessToken = Get-GoogleAccessToken -App $App -Refresh -ErrorAction Stop
+        $AccessToken = Get-GoogleAccessToken -App $App -ErrorAction Stop
         sleep -Milliseconds 500
     }
 
@@ -95,25 +96,10 @@ function Invoke-GoogleAPI
     switch ($PsBoundParameters.Keys)
     {
         Body    {$WRProperties.Add('Body',$Body)}
-        Options {
-            $Options.GetEnumerator().ForEach{
-                If ($_.Value -gt 1)
-                {
-                    foreach ($Value in $_.Value)
-                    {
-                        $WRProperties.URI = $WRProperties.URI + "&$($_.Key)=$($Value.replace(' ','%20'))"
-                    }
-                }
-                else
-                {
-                    $WRProperties.URI = $WRProperties.URI + "&$($_.Key)=$($_.Value.replace(' ','%20'))"
-                }
-            }
-        }
+        Options {$WRProperties.URI = $WRProperties.URI + '&' + ($Options -join '&')}
     }
     
-    Invoke-WebRequest @WRProperties -ContentType 'application/json;charset=utf-8' | 
-        Select -ExpandProperty Content | ConvertFrom-Json
+    Invoke-WebRequest @WRProperties -ContentType 'application/json' | ConvertFrom-Json
 }
 
 # Set up a connection to the API of a Google app
@@ -123,7 +109,7 @@ function Connect-GoogleApp
     Param(
         # Google App to connect to
         [Parameter(Mandatory=$true)]
-        [ValidateSet('GMail','Calendar','Contacts')]
+        [ValidateSet('Calendar')]
         [GoogleApp]
         $App,
 
@@ -150,6 +136,11 @@ function Connect-GoogleApp
         $ClientIDInfo = Get-Content $File -ErrorAction Stop | ConvertFrom-Json | select -ExpandProperty Installed
         
         $null = New-Item HKCU:\Software\GooglePoSH
+        Set-ItemProperty -Path HKCU:\Software\GooglePoSH -Name client_id -Value $ClientIDInfo.client_id
+        Set-ItemProperty -Path HKCU:\Software\GooglePoSH -Name client_secret -Value $ClientIDInfo.client_secret
+        Set-ItemProperty -Path HKCU:\Software\GooglePoSH -Name auth_uri -Value $ClientIDInfo.auth_uri
+        Set-ItemProperty -Path HKCU:\Software\GooglePoSH -Name token_uri -Value $ClientIDInfo.token_uri
+        Set-ItemProperty -Path HKCU:\Software\GooglePoSH -Name redirect_uris -Type MultiString -Value $ClientIDInfo.redirect_uris
     }
     else
     {
@@ -175,9 +166,3 @@ function Connect-GoogleApp
 }
 
 #endregion helper functions
-
-# Load classes
-. "$PSScriptRoot\GoogleAppsClasses.ps1"
-
-# Load calendar cmdlets
-. "$PSScriptRoot\GoogleCalendar.ps1"
