@@ -99,7 +99,7 @@ function Invoke-GoogleAPI
         Options {$WRProperties.URI = $WRProperties.URI + '&' + ($Options -join '&')}
     }
     
-    Invoke-WebRequest @WRProperties -ContentType 'application/json' | ConvertFrom-Json
+    Invoke-WebRequest @WRProperties -ContentType 'application/json;charset=utf-8' | ConvertFrom-Json
 }
 
 # Set up a connection to the API of a Google app
