@@ -1,4 +1,5 @@
 . "$PSScriptRoot\GoogleAppsClasses.ps1"
+. "$PSScriptRoot\GoogleCalendar.ps1"
 #region helper functions
 
 # Get or refresh access token
@@ -74,7 +75,7 @@ function Invoke-GoogleAPI
         [string]
         $Target,
 
-        [string[]]
+        [hashtable]
         $Options,
 
         $Body
@@ -96,7 +97,7 @@ function Invoke-GoogleAPI
     switch ($PsBoundParameters.Keys)
     {
         Body    {$WRProperties.Add('Body',$Body)}
-        Options {$WRProperties.URI = $WRProperties.URI + '&' + ($Options -join '&')}
+        Options {$WRProperties.URI = $WRProperties.URI + '&' + ($Options.GetEnumerator().ForEach{"$($_.Key)=$($_.Value)"} -join '&')}
     }
     
     Invoke-WebRequest @WRProperties -ContentType 'application/json;charset=utf-8' | ConvertFrom-Json
@@ -115,7 +116,7 @@ function Connect-GoogleApp
 
         # Path to the json file with the client secret
         [Parameter(Mandatory=$false)]
-        $File = "O:\Mijn Documenten\Prive\Google_client_secret.json",
+        $File = "$env:OneDriveConsumer\Documenten\PoSH\Modules\GoogleApps\client_secret.json",
 
         # Reset and re-authorize the connection
         [switch]
